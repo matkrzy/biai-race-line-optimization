@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="Olaf Kryus, Mateusz Krzyżanowski">
+    <script src="Background.js"></script>
+    <script src="Generation.js"></script>
+    <script src="Genotype.js"></script>
+    <script src="GeoBbox.js"></script>
+    <script src="GeoCoordinate.js"></script>
+    <script src="Point.js"></script>
+    <script src="Population.js"></script>
+    <script src="RacingLine.js"></script>
+    <script src="Track.js"></script>
+    <script src="Vehicle.js"></script>
+    <script src="View.js"></script>
+</head>
+<body>
+<canvas id="canvas" width="512" height="512"></canvas><br>
+<label for="pan-x">x: </label>
+-1024<input id="pan-x" type="range" min="-1024" max="1024" value="0" step="any">1024<br>
+<label for="pan-y">y: </label>
+-1024<input id="pan-y" type="range" min="-1024" max="1024" value="0" step="any">1024<br>
+<label for="zoom">zoom: </label>
+10<sup>-1</sup><input id="zoom" type="range" min="-1" max="1" value="0" step="any">10<sup>1</sup><br>
+<script>
+    pan_x_slider = document.getElementById("pan-x");
+    pan_y_slider = document.getElementById("pan-y");
+    zoom_slider = document.getElementById("zoom");
+
+    pan_x_slider.addEventListener("change", function() {
+        view.setPan({x: pan_x_slider.value, y: view.getPan().y});
+        view.draw();
+    });
+
+    pan_y_slider.addEventListener("change", function() {
+        view.setPan({x: view.getPan().x, y: pan_y_slider.value});
+        view.draw();
+    });
+
+    zoom_slider.addEventListener("change", function() {
+        view.setZoom(Math.pow(10, zoom_slider.value));
+        view.draw();
+    });
+</script>
+<script>
+    var canvas = document.getElementById("canvas");
+    var ctx = canvas.getContext("2d");
+
+    var req = new XMLHttpRequest();
+    req.open('GET', 'shanghai.geojson', false);
+    req.send(null);
+    if (req.status == 200) {
+        var i;
+
+        track = new Track(req.responseText);
+        vehicle = new Vehicle();
+        fitnessFunction = function(genotype) { return 0; }; //TODO: Implement real fitness function
+        population = new Population(20, 0.005, fitnessFunction, {
+            track: track,
+            vehicle: vehicle
+        });
+        generation = population.getGenerations()[0];
+        genotypes = generation.getGenotypes();
+        racingLines = [];
+        for (i = 0; i < genotypes.length; i++) {
+            racingLines.push(new RacingLine(genotypes[i]));
+        }
+
+        view = new View();
+        view.addObject(new Background());
+        view.addObject(track);
+        for (i = 0; i < racingLines.length; i++) {
+            view.addObject(racingLines[i]);
+        }
+
+        view.fitToTrack(track, {x: 20, y: 20});
+        zoom_slider.value = Math.log(view.getZoom()) / Math.log(10);
+        view.draw();
+    }
+</script>
+</body>
+</html>
